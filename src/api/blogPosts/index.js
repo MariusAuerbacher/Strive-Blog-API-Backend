@@ -1,10 +1,30 @@
 import Express from "express";
-import fs from "fs";
+import fs from "fs-extra";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import uniqid from "uniqid";
-import { checkBlogPostsSchema, triggerBadRequest } from "./validation.js"
+import { checkBlogPostsSchema, triggerBadRequest } from "./validation.js";
 //import createHttpError from "http-errors"
+//import { getBlogPosts, writeBlogPosts} from "../lib/fs-tools"
+import multer from "multer"
+import { extname } from "path"
+
+
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, coverJSONPath)
+  },
+  filename: function (req, file, cb) {
+    const originalFileExtension = extname(file.originalname)
+    cb(null, req.params.id + originalFileExtension)
+  }
+})
+
+const upload = multer({ storage: storage })
+
+//const coverJSONPath = join(dirname(fileURLToPath(import.meta.url)), "../../public/img/authors")
+
 
 const blogPostsRouter = Express.Router();
 
@@ -14,10 +34,9 @@ const blogPostsJSONPath = join(
 );
 
 const theOgMiddleware = (req, res, next) => {
-  console.log("I am the OG middleware!")
-  next()
-}
-
+  console.log("I am the OG middleware!");
+  next();
+};
 
 blogPostsRouter.get("/", theOgMiddleware, (req, res) => {
   const blogPostsArray = JSON.parse(fs.readFileSync(blogPostsJSONPath));
@@ -31,24 +50,28 @@ blogPostsRouter.get("/:id", (req, res, next) => {
     (blogPost) => blogPost.id === req.params.id
   );
 
-
-  if(!foundBlogPosts){
-    next({status: 400, message:"Post not found"})
-    return
+  if (!foundBlogPosts) {
+    next({ status: 400, message: "Post not found" });
+    return;
   }
 
   res.send(foundBlogPosts);
 });
 
-blogPostsRouter.post("/", theOgMiddleware, checkBlogPostsSchema, triggerBadRequest, (req, res, next) => {
-  const newBlogPost = {
-    ...req.body,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    id: uniqid(),
-  };
+blogPostsRouter.post(
+  "/",
+  theOgMiddleware,
+  checkBlogPostsSchema,
+  triggerBadRequest,
+  async (req, res, next) => {
+    const newBlogPost = {
+      ...req.body,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      id: uniqid(),
+    };
 
-  /*if(!req.body.title){
+    /*if(!req.body.title){
     next({status: 400, message: "Please enter the title"})
     return 
   }
@@ -57,14 +80,15 @@ blogPostsRouter.post("/", theOgMiddleware, checkBlogPostsSchema, triggerBadReque
     return 
   }*/
 
-  const blogPostsArray = JSON.parse(fs.readFileSync(blogPostsJSONPath));
+    const blogPostsArray = await getBlogPosts() //JSON.parse(fs.readFileSync(blogPostsJSONPath));
 
-  blogPostsArray.push(newBlogPost);
+    blogPostsArray.push(newBlogPost);
 
-  fs.writeFileSync(blogPostsJSONPath, JSON.stringify(blogPostsArray));
+    await writeBlogPosts(blogPostsArray) //fs.writeFileSync(blogPostsJSONPath, JSON.stringify(blogPostsArray));
 
-  res.status(201).send({ id: newBlogPost.id });
-});
+    res.status(201).send({ id: newBlogPost.id });
+  }
+);
 
 blogPostsRouter.put("/", (req, res) => {
   const blogPostsArray = JSON.parse(fs.readFileSync(blogPostsJSONPath));
@@ -91,16 +115,45 @@ blogPostsRouter.delete("/:id", (req, res, next) => {
     (blogPost) => blogPost.id !== req.params.id
   );
 
-  if(blogPostsArray.length == remainingBlogPostsArray.length){
-    next({message:"Couldn't delete Post, not found"})
-    return
+  if (blogPostsArray.length == remainingBlogPostsArray.length) {
+    next({ message: "Couldn't delete Post, not found" });
+    return;
   }
-
-
 
   fs.writeFileSync(blogPostsJSONPath, JSON.stringify(remainingBlogPostsArray));
 
   res.status(204).send();
 });
+
+
+blogPostsRouter.post("/:id/comments", (req, res, next) => {
+  const blogPostsArray = JSON.parse(fs.readFileSync(blogPostsJSONPath));
+  const index = blogPostsArray.findIndex(
+    (blogPost) => blogPost.id === req.params.id
+  );
+  const oldBlogPost = blogPostsArray[index];
+  oldBlogPost.comments.push(req.body)
+  blogPostsArray[index] = oldBlogPost
+  fs.writeFileSync(blogPostsJSONPath, JSON.stringify(blogPostsArray));
+
+  res.send(oldBlogPost);
+});
+
+
+
+/*blogPostsRouter.post("/:id/uploadCover", upload.single("cover"), (req, res)=> {
+  const imgURL = `http://localhost:3001/public/${req.params.id}${ extname(req.file.originalname)}`
+ 
+  const blogPostsArray = JSON.parse(fs.readFileSync(blogPostsJSONPath));
+  const index = blogPostsArray.findIndex(blogPost => blogPost.id === req.params.id)
+  const oldBlogPost = blogPostsArray[index]
+  const updatedBlogPost = {...oldBlogPost, cover: imgURL}
+  blogPostsArray[index] = updatedBlogPost
+
+  fs.writeFileSync(blogPostsJSONPath, JSON.stringify(blogPostsArray))
+
+  res.send(updatedBlogPost)
+})*/
+
 
 export default blogPostsRouter;
