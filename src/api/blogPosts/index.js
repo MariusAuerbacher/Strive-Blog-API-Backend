@@ -5,7 +5,7 @@ import { dirname, join } from "path";
 import uniqid from "uniqid";
 import { checkBlogPostsSchema, triggerBadRequest } from "./validation.js";
 //import createHttpError from "http-errors"
-//import { getBlogPosts, writeBlogPosts} from "../lib/fs-tools"
+import { getBlogPosts, writeBlogPosts} from "../lib/fs-tools.js"
 import multer from "multer"
 import { extname } from "path"
 
@@ -23,7 +23,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage })
 
-//const coverJSONPath = join(dirname(fileURLToPath(import.meta.url)), "../../public/img/authors")
+const coverJSONPath = join(dirname(fileURLToPath(import.meta.url)), "../../public/img/blogPosts")
 
 
 const blogPostsRouter = Express.Router();
@@ -141,7 +141,7 @@ blogPostsRouter.post("/:id/comments", (req, res, next) => {
 
 
 
-/*blogPostsRouter.post("/:id/uploadCover", upload.single("cover"), (req, res)=> {
+blogPostsRouter.post("/:id/uploadCover", upload.single("cover"), (req, res)=> {
   const imgURL = `http://localhost:3001/public/${req.params.id}${ extname(req.file.originalname)}`
  
   const blogPostsArray = JSON.parse(fs.readFileSync(blogPostsJSONPath));
@@ -153,7 +153,7 @@ blogPostsRouter.post("/:id/comments", (req, res, next) => {
   fs.writeFileSync(blogPostsJSONPath, JSON.stringify(blogPostsArray))
 
   res.send(updatedBlogPost)
-})*/
+})
 
 
 export default blogPostsRouter;
