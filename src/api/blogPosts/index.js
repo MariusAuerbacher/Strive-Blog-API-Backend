@@ -11,6 +11,9 @@ import { extname } from "path"
 import { v2 as cloudinary } from "cloudinary"
 import { CloudinaryStorage } from "multer-storage-cloudinary"
 /*import { saveUsersAvatars } from "../../lib/fs-tools.js"*/
+import { pipeline } from "stream"
+import { createGzip } from "zlib"
+import { getPDFReadableStream } from "../../lib/pdf-tools.js"
 
 
 //const filesRouter = Express.Router()
@@ -196,5 +199,19 @@ blogPostsRouter.post("/:id/uploadAvatar", cloudinaryUploader, async (req, res, n
     }
 })
 
+blogPostsRouter.get("/pdf", async (req, res, next) => {
+  try {
+    res.setHeader("Content-Disposition", "attachment; filename=example.pdf") 
+    const books = await getBlogPosts()
+    const source = getPDFReadableStream(books[0])
+    const destination = res
+
+    pipeline(source, destination, err => {
+      if (err) console.log(err)
+    })
+  } catch (error) {
+    next(error)
+  }
+})
 
 export default blogPostsRouter;
