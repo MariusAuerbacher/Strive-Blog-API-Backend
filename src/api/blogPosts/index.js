@@ -8,6 +8,21 @@ import { checkBlogPostsSchema, triggerBadRequest } from "./validation.js";
 import { getBlogPosts, writeBlogPosts} from "../lib/fs-tools.js"
 import multer from "multer"
 import { extname } from "path"
+import { v2 as cloudinary } from "cloudinary"
+import { CloudinaryStorage } from "multer-storage-cloudinary"
+/*import { saveUsersAvatars } from "../../lib/fs-tools.js"*/
+
+
+//const filesRouter = Express.Router()
+
+const cloudinaryUploader = multer({
+  storage: new CloudinaryStorage({
+    cloudinary,
+    params: {
+      folder: "hw-u4-w1-d2/blogPosts",
+    },
+  }),
+}).single("cover")
 
 
 
@@ -153,6 +168,32 @@ blogPostsRouter.post("/:id/uploadCover", upload.single("cover"), (req, res)=> {
   fs.writeFileSync(blogPostsJSONPath, JSON.stringify(blogPostsArray))
 
   res.send(updatedBlogPost)
+})
+
+
+
+
+blogPostsRouter.post("/:id/uploadAvatar", cloudinaryUploader, async (req, res, next) => {
+  try {
+    const blogsArray = await getBlogPosts();
+      const index = blogsArray.findIndex(
+        (blog) => blog._id === req.params.blogId
+      );
+      if (index !== -1) {
+        const blogToUpdate = blogsArray[index];
+        const updatedBlog = {
+          ...blogToUpdate,
+          ...req.body,
+          cover: req.file.path,
+          updatedAt: new Date(),
+        };
+        blogsArray[index] = updatedBlog;
+        await writeBlogs(blogsArray);
+      }
+      res.send({ message: "file uploaded" });
+    } catch (error) {
+      next(error);
+    }
 })
 
 

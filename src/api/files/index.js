@@ -18,14 +18,26 @@ const cloudinaryUploader = multer({
 
 filesRouter.post("/:id/uploadAvatar", cloudinaryUploader, async (req, res, next) => {
   try {
-    console.log("FILE:", req.file)
-    res.send({ message: "file uploaded" })
-  } catch (error) {
-    next(error)
-  }
+    const blogsArray = await getBlogs();
+      const index = blogsArray.findIndex(
+        (blog) => blog._id === req.params.blogId
+      );
+      if (index !== -1) {
+        const blogToUpdate = blogsArray[index];
+        const updatedBlog = {
+          ...blogToUpdate,
+          cover: req.file.path,
+        };
+        blogsArray[index] = updatedBlog;
+        await writeBlogs(blogsArray);
+      }
+      res.send({ message: "file uploaded" });
+    } catch (error) {
+      next(error);
+    }
 })
 
-filesRouter.post("/:id/uploadAvatar", multer().array("avatars"), async (req, res, next) => {
+/*filesRouter.post("/:id/uploadAvatar", multer().array("avatars"), async (req, res, next) => {
   try {
     await Promise.all(req.files.map(file => saveUsersAvatars(file.originalname, file.buffer)))
     console.log("REQ FILES:", req.files)
@@ -33,6 +45,6 @@ filesRouter.post("/:id/uploadAvatar", multer().array("avatars"), async (req, res
   } catch (error) {
     next(error)
   }
-})
+})*/
 
 export default filesRouter
