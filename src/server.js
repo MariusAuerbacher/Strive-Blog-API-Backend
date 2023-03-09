@@ -7,17 +7,19 @@ import { errorsHandler } from "./errorsHandler.js";
 import { dirname, join } from "path"
 import { fileURLToPath } from "url";
 import createHttpError from "http-errors";
+import filesRouter from "./api/files/index.js";
 
 const server = Express();
 const port = process.env.PORT || 3001;
 
 const publicFolderPath = join(process.cwd(), "./public")
-//const imagesJSONPath = join(dirname(fileURLToPath(import.meta.url)), "./public/img/authors")
-//const coverJSONPath = join(dirname(fileURLToPath(import.meta.url)), "./public/img/blogPosts")
+const imagesJSONPath = join(dirname(fileURLToPath(import.meta.url)), "./public/img/authors")
+const coverJSONPath = join(dirname(fileURLToPath(import.meta.url)), "./public/img/blogPosts")
 
 const whitelist = [process.env.FE_DEV_URL, process.env.FE_PROD_URL]
 
 server.use(Express.static(publicFolderPath))
+
 
 server.use(
   cors({
@@ -42,6 +44,7 @@ server.use(Express.json());
 
 server.use("/authors", authorsRouter);
 server.use("/blogPosts", blogPostsRouter);
+server.use("/blogPosts", filesRouter)
 
 
 server.use(errorsHandler);

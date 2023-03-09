@@ -5,18 +5,21 @@ import { dirname, join } from "path";
 import uniqid from "uniqid";
 import { checkBlogPostsSchema, triggerBadRequest } from "./validation.js";
 //import createHttpError from "http-errors"
-import { getBlogPosts, writeBlogPosts} from "../lib/fs-tools.js"
-import multer from "multer"
-import { extname } from "path"
-import { v2 as cloudinary } from "cloudinary"
-import { CloudinaryStorage } from "multer-storage-cloudinary"
-/*import { saveUsersAvatars } from "../../lib/fs-tools.js"*/
-import { pipeline } from "stream"
-import { createGzip } from "zlib"
-import { getPDFReadableStream } from "../../lib/pdf-tools.js"
-
-
-//const filesRouter = Express.Router()
+import {
+  getBlogPosts,
+  //getBlogPostsJSONReadableStream,
+  writeBlogPosts,
+} from "../lib/fs-tools.js";
+import multer from "multer";
+import { extname } from "path";
+import { v2 as cloudinary } from "cloudinary";
+import { CloudinaryStorage } from "multer-storage-cloudinary";
+//import { saveUsersAvatars } from "../../lib/fs-tools.js"
+import { pipeline } from "stream";
+import { getPDFReadableStream } from "../lib/pdf-tools.js";
+//import { createGzip } from "zlib"
+import { sendsBlogPostCreatedEmail } from "../lib/email.tools.js";
+//import { Transform } from "@json2csv/node";
 
 const cloudinaryUploader = multer({
   storage: new CloudinaryStorage({
@@ -25,24 +28,24 @@ const cloudinaryUploader = multer({
       folder: "hw-u4-w1-d2/blogPosts",
     },
   }),
-}).single("cover")
-
-
+}).single("cover");
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, coverJSONPath)
+    cb(null, coverJSONPath);
   },
   filename: function (req, file, cb) {
-    const originalFileExtension = extname(file.originalname)
-    cb(null, req.params.id + originalFileExtension)
-  }
-})
+    const originalFileExtension = extname(file.originalname);
+    cb(null, req.params.id + originalFileExtension);
+  },
+});
 
-const upload = multer({ storage: storage })
+const upload = multer({ storage: storage });
 
-const coverJSONPath = join(dirname(fileURLToPath(import.meta.url)), "../../public/img/blogPosts")
-
+const coverJSONPath = join(
+  dirname(fileURLToPath(import.meta.url)),
+  "../../public/img/blogPosts"
+);
 
 const blogPostsRouter = Express.Router();
 
@@ -60,6 +63,20 @@ blogPostsRouter.get("/", theOgMiddleware, (req, res) => {
   const blogPostsArray = JSON.parse(fs.readFileSync(blogPostsJSONPath));
   res.send(blogPostsArray);
 });
+
+/*blogPostsRouter.get("/csv", (req, res, next) => {
+  try {
+    res.setHeader("Content-Disposition", "attachment; filename=posts.csv");
+    const source = getBlogPostsJSONReadableStream();
+    const transform = new Transform({ fields: ["category", "title"] });
+    const destination = res;
+    pipeline(source, transform, destination, (err) => {
+      if (err) console.log(err);
+    });
+  } catch (error) {
+    next(error);
+  }
+});*/
 
 blogPostsRouter.get("/:id", (req, res, next) => {
   const blogPostsArray = JSON.parse(fs.readFileSync(blogPostsJSONPath));
@@ -79,7 +96,7 @@ blogPostsRouter.get("/:id", (req, res, next) => {
 blogPostsRouter.post(
   "/",
   theOgMiddleware,
-  checkBlogPostsSchema,
+  //checkBlogPostsSchema,
   triggerBadRequest,
   async (req, res, next) => {
     const newBlogPost = {
@@ -97,12 +114,14 @@ blogPostsRouter.post(
     next({status: 400, message: "Please enter the cover"})
     return 
   }*/
-
-    const blogPostsArray = await getBlogPosts() //JSON.parse(fs.readFileSync(blogPostsJSONPath));
+    const blogPostsArray = await getBlogPosts(); //JSON.parse(fs.readFileSync(blogPostsJSONPath));
 
     blogPostsArray.push(newBlogPost);
 
-    await writeBlogPosts(blogPostsArray) //fs.writeFileSync(blogPostsJSONPath, JSON.stringify(blogPostsArray));
+    await writeBlogPosts(blogPostsArray); //fs.writeFileSync(blogPostsJSONPath, JSON.stringify(blogPostsArray));
+
+    //send email +++++++++++++++++++++
+    //await sendsBlogPostCreatedEmail(newBlogPost.email, newBlogPost.title);
 
     res.status(201).send({ id: newBlogPost.id });
   }
@@ -143,42 +162,43 @@ blogPostsRouter.delete("/:id", (req, res, next) => {
   res.status(204).send();
 });
 
-
 blogPostsRouter.post("/:id/comments", (req, res, next) => {
   const blogPostsArray = JSON.parse(fs.readFileSync(blogPostsJSONPath));
   const index = blogPostsArray.findIndex(
     (blogPost) => blogPost.id === req.params.id
   );
   const oldBlogPost = blogPostsArray[index];
-  oldBlogPost.comments.push(req.body)
-  blogPostsArray[index] = oldBlogPost
+  oldBlogPost.comments.push(req.body);
+  blogPostsArray[index] = oldBlogPost;
   fs.writeFileSync(blogPostsJSONPath, JSON.stringify(blogPostsArray));
 
   res.send(oldBlogPost);
 });
 
+blogPostsRouter.post("/:id/uploadCover", upload.single("cover"), (req, res) => {
+  const imgURL = `http://localhost:3001/public/${req.params.id}${extname(
+    req.file.originalname
+  )}`;
 
-
-blogPostsRouter.post("/:id/uploadCover", upload.single("cover"), (req, res)=> {
-  const imgURL = `http://localhost:3001/public/${req.params.id}${ extname(req.file.originalname)}`
- 
   const blogPostsArray = JSON.parse(fs.readFileSync(blogPostsJSONPath));
-  const index = blogPostsArray.findIndex(blogPost => blogPost.id === req.params.id)
-  const oldBlogPost = blogPostsArray[index]
-  const updatedBlogPost = {...oldBlogPost, cover: imgURL}
-  blogPostsArray[index] = updatedBlogPost
+  const index = blogPostsArray.findIndex(
+    (blogPost) => blogPost.id === req.params.id
+  );
+  const oldBlogPost = blogPostsArray[index];
+  const updatedBlogPost = { ...oldBlogPost, cover: imgURL };
+  blogPostsArray[index] = updatedBlogPost;
 
-  fs.writeFileSync(blogPostsJSONPath, JSON.stringify(blogPostsArray))
+  fs.writeFileSync(blogPostsJSONPath, JSON.stringify(blogPostsArray));
 
-  res.send(updatedBlogPost)
-})
+  res.send(updatedBlogPost);
+});
 
-
-
-
-blogPostsRouter.post("/:id/uploadAvatar", cloudinaryUploader, async (req, res, next) => {
-  try {
-    const blogsArray = await getBlogPosts();
+blogPostsRouter.post(
+  "/:id/uploadAvatar",
+  cloudinaryUploader,
+  async (req, res, next) => {
+    try {
+      const blogsArray = await getBlogPosts();
       const index = blogsArray.findIndex(
         (blog) => blog._id === req.params.blogId
       );
@@ -197,21 +217,36 @@ blogPostsRouter.post("/:id/uploadAvatar", cloudinaryUploader, async (req, res, n
     } catch (error) {
       next(error);
     }
-})
-
-blogPostsRouter.get("/pdf", async (req, res, next) => {
-  try {
-    res.setHeader("Content-Disposition", "attachment; filename=example.pdf") 
-    const books = await getBlogPosts()
-    const source = getPDFReadableStream(books[0])
-    const destination = res
-
-    pipeline(source, destination, err => {
-      if (err) console.log(err)
-    })
-  } catch (error) {
-    next(error)
   }
-})
+);
+
+blogPostsRouter.get("/:id/pdf", async (req, res, next) => {
+  try {
+    const blogPosts = await getBlogPosts();
+    const foundBlogPost = blogPosts.find((b) => b.id === req.params.id);
+
+    if (foundBlogPost) {
+      res.setHeader("Content-Disposition", "attachment; filename=anything.pfd");
+      const source = getPDFReadableStream(foundBlogPost);
+      const destination = res;
+
+      pipeline(source, destination, (err) => {
+        if (err) console.log(err);
+      });
+    }
+  } catch (error) {
+    next(error);
+  }
+});
+
+/*blogPostsRouter.post("/register", async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    await sendsBlogPostCreatedEmail(email);
+    res.send();
+  } catch (error) {
+    next(error);
+  }
+});*/
 
 export default blogPostsRouter;

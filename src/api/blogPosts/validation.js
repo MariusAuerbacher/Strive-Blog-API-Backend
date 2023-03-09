@@ -20,7 +20,7 @@ const blogPostsSchema = {
       errorMessage: "A image is a mandatory",
     },
   },
-  readTime: {
+  /*readTime: {
     in: ["body"],
     isNumber: {
       errorMessage: "readTime is a mandatory field and needs to be a number!",
@@ -29,14 +29,13 @@ const blogPostsSchema = {
   author: {
     in: ["body"],
     name: "AUTHOR AVATAR NAME",
-    avatar: "AUTHOR AVATAR LINK",
   },
   content: {
     in: ["body"],
     isString: {
       errorMessage: "Content is a mandatory field and needs to be a string!",
     },
-  },
+  },*/
   createdAt: {
     in: ["body"],
     isString: {
