@@ -132,7 +132,7 @@ blogPostsRouter.post(
     await writeBlogPosts(blogPostsArray); //fs.writeFileSync(blogPostsJSONPath, JSON.stringify(blogPostsArray));
 
     //send email +++++++++++++++++++++
-    //await sendsBlogPostCreatedEmail(newBlogPost.email, newBlogPost.title);
+    await sendsBlogPostCreatedEmail(newBlogPost.email, newBlogPost.title);
 
     res.status(201).send({ id: newBlogPost.id });
   }
