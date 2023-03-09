@@ -7,6 +7,7 @@ import { checkBlogPostsSchema, triggerBadRequest } from "./validation.js";
 //import createHttpError from "http-errors"
 import {
   getBlogPosts,
+  getBlogPostsJSONReadableStream,
   //getBlogPostsJSONReadableStream,
   writeBlogPosts,
 } from "../lib/fs-tools.js";
@@ -19,7 +20,7 @@ import { pipeline } from "stream";
 import { getPDFReadableStream } from "../lib/pdf-tools.js";
 //import { createGzip } from "zlib"
 import { sendsBlogPostCreatedEmail } from "../lib/email.tools.js";
-//import { Transform } from "@json2csv/node";
+import { Transform } from "@json2csv/node";
 
 const cloudinaryUploader = multer({
   storage: new CloudinaryStorage({
@@ -59,12 +60,22 @@ const theOgMiddleware = (req, res, next) => {
   next();
 };
 
+blogPostsRouter.post("/register", async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    await sendsBlogPostCreatedEmail(email);
+    res.send();
+  } catch (error) {
+    next(error);
+  }
+});
+
 blogPostsRouter.get("/", theOgMiddleware, (req, res) => {
   const blogPostsArray = JSON.parse(fs.readFileSync(blogPostsJSONPath));
   res.send(blogPostsArray);
 });
 
-/*blogPostsRouter.get("/csv", (req, res, next) => {
+blogPostsRouter.get("/csv", (req, res, next) => {
   try {
     res.setHeader("Content-Disposition", "attachment; filename=posts.csv");
     const source = getBlogPostsJSONReadableStream();
@@ -76,7 +87,7 @@ blogPostsRouter.get("/", theOgMiddleware, (req, res) => {
   } catch (error) {
     next(error);
   }
-});*/
+});
 
 blogPostsRouter.get("/:id", (req, res, next) => {
   const blogPostsArray = JSON.parse(fs.readFileSync(blogPostsJSONPath));
@@ -239,14 +250,6 @@ blogPostsRouter.get("/:id/pdf", async (req, res, next) => {
   }
 });
 
-/*blogPostsRouter.post("/register", async (req, res, next) => {
-  try {
-    const { email } = req.body;
-    await sendsBlogPostCreatedEmail(email);
-    res.send();
-  } catch (error) {
-    next(error);
-  }
-});*/
+
 
 export default blogPostsRouter;
