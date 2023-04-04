@@ -133,6 +133,7 @@ blogPostsRouter.post(
 
     //send email +++++++++++++++++++++
     await sendsBlogPostCreatedEmail(newBlogPost.email, newBlogPost.title);
+    console.log("email succesfully sent")
 
     res.status(201).send({ id: newBlogPost.id });
   }
