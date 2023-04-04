@@ -5,6 +5,9 @@ import { dirname, join } from "path"
 import uniqid from "uniqid"
 import multer from "multer"
 import { extname } from "path"
+import AuthorModel from "./model.js"
+import bcrypt from "bcrypt"
+import jwt from "jsonwebtoken"
 
 const authorsRouter = Express.Router()
 
@@ -60,7 +63,41 @@ authorsRouter.post("/", (req, res) => {
   res.status(201).send({id: newAuthor.id})
 })
 
+authorsRouter.post("/signup", async(req, res)=> {
+  const authorExist = await AuthorModel.findOne({email: req.body.email})
+  if(authorExist){
+   return res.status(400).json("Email already exists")
+  } 
+  
+  const hashedPassword = bcrypt.hashSync(req.body.password, 12)
 
+  const author = new AuthorModel({
+    name: req.body.name,
+    surname: req.body.surname,
+    email: req.body.email,
+    dob: req.body.dob,
+    avatar: req.body.avatar,
+    password: hashedPassword
+  })
+  await author.save()
+
+  const token = jwt.sign({authorId: author._id}, "abc", {expiresIn: "1d"})
+  res.json({token, author})
+
+})
+
+authorsRouter.post("/login", async (req, res)=> {
+  const author = await AuthorModel.findOne({email: req.body.email})
+  if(!author){
+    return res.status(400).json("Wrong Email")
+  }
+  if(!bcrypt.compareSync(req.body.password, author.password)){
+    return res.status(400).json("Wrong Password")
+  }
+  const token = jwt.sign({authorId: author._id}, "abc", {expiresIn: "1d"})
+  res.json({token, author})
+
+})
 
 
 authorsRouter.put("/", (req, res) => {

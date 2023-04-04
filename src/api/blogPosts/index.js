@@ -21,6 +21,7 @@ import { getPDFReadableStream } from "../lib/pdf-tools.js";
 //import { createGzip } from "zlib"
 import { sendsBlogPostCreatedEmail } from "../lib/email.tools.js";
 import { Transform } from "@json2csv/node";
+import authMiddleware from "../lib/auth.js";
 
 const cloudinaryUploader = multer({
   storage: new CloudinaryStorage({
@@ -109,12 +110,14 @@ blogPostsRouter.post(
   theOgMiddleware,
   //checkBlogPostsSchema,
   triggerBadRequest,
+  authMiddleware,
   async (req, res, next) => {
     const newBlogPost = {
       ...req.body,
       createdAt: new Date(),
       updatedAt: new Date(),
       id: uniqid(),
+      authorId: req.authorId
     };
 
     /*if(!req.body.title){
@@ -132,14 +135,17 @@ blogPostsRouter.post(
     await writeBlogPosts(blogPostsArray); //fs.writeFileSync(blogPostsJSONPath, JSON.stringify(blogPostsArray));
 
     //send email +++++++++++++++++++++
-    await sendsBlogPostCreatedEmail(newBlogPost.email, newBlogPost.title);
-    console.log("email succesfully sent")
+    /*await sendsBlogPostCreatedEmail(newBlogPost.email, newBlogPost.title);
+    console.log("email succesfully sent")*/
 
     res.status(201).send({ id: newBlogPost.id });
   }
 );
 
-blogPostsRouter.put("/", (req, res) => {
+
+
+
+blogPostsRouter.put("/:id",  authMiddleware, (req, res) => {
   const blogPostsArray = JSON.parse(fs.readFileSync(blogPostsJSONPath));
   const index = blogPostsArray.findIndex(
     (blogPost) => blogPost.id === req.params.id
@@ -157,7 +163,7 @@ blogPostsRouter.put("/", (req, res) => {
   res.send(updatedBlogPost);
 });
 
-blogPostsRouter.delete("/:id", (req, res, next) => {
+blogPostsRouter.delete("/:id",  authMiddleware, (req, res, next) => {
   const blogPostsArray = JSON.parse(fs.readFileSync(blogPostsJSONPath));
 
   const remainingBlogPostsArray = blogPostsArray.filter(
