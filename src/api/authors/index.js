@@ -33,8 +33,10 @@ authorsRouter.post("/", (req, res) => {
 
   const authorsArray = JSON.parse(fs.readFileSync(authorsJSONPath));
 
-  authorsArray.push(newAuthor)
+ 
 
+
+  authorsArray.push(newAuthor)
   fs.writeFileSync(authorsJSONPath, JSON.stringify(authorsArray))
 
 
