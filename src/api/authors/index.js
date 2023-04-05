@@ -63,7 +63,7 @@ authorsRouter.post("/", (req, res) => {
   res.status(201).send({id: newAuthor.id})
 })
 
-authorsRouter.post("/signup", async(req, res)=> {
+authorsRouter.post("/register", async(req, res)=> {
   const authorExist = await AuthorModel.findOne({email: req.body.email})
   if(authorExist){
    return res.status(400).json("Email already exists")
