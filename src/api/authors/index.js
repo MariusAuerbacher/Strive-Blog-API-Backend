@@ -8,6 +8,7 @@ import { extname } from "path"
 import AuthorModel from "./model.js"
 import bcrypt from "bcrypt"
 import jwt from "jsonwebtoken"
+import passport from "passport";
 
 const authorsRouter = Express.Router()
 
@@ -27,7 +28,15 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage })
 
+authorsRouter.get("/auth/google", passport.authenticate("google", { scope: ["profile", "email"] }))
 
+authorsRouter.get("/auth/google/callback", passport.authenticate("google", { session: false }), (req, res, next) => {
+  try {
+    res.redirect(`${process.env.FE_DEV_URL}?accessToken=${req.user.accessToken}`)
+  } catch (error) {
+    next(error)
+  }
+})
 
 
 

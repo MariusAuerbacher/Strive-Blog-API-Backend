@@ -16,9 +16,13 @@ import filesRouter from "./api/files/index.js";
 import mongoose from "mongoose";
 import authMiddleware from "./api/lib/auth.js";
 import { getBlogPosts } from "./api/lib/fs-tools.js";
+import passport from "passport";
+import googleStrategy from "./api/lib/googleauth.js";
 
 const server = Express();
 const port = process.env.PORT || 3001;
+
+
 
 const publicFolderPath = join(process.cwd(), "./public");
 const imagesJSONPath = join(
@@ -33,6 +37,8 @@ const coverJSONPath = join(
 const whitelist = [process.env.FE_DEV_URL, process.env.FE_PROD_URL];
 
 server.use(Express.static(publicFolderPath));
+
+passport.use("google", googleStrategy)
 
 server.use(
   cors({
@@ -55,6 +61,8 @@ server.use(
 server.use("/public", Express.static(coverJSONPath))
 server.use(cors())*/
 server.use(Express.json());
+server.use(passport.initialize())
+
 
 server.use("/authors", authorsRouter);
 server.use("/blogPosts", blogPostsRouter);
